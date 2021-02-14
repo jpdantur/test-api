@@ -2,16 +2,20 @@ package app
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/jpdantur/test-api/internal/http/ping"
+	"github.com/jpdantur/test-api/internal/domain/transactions"
+	transactionsController "github.com/jpdantur/test-api/internal/http/controllers/transactions"
 )
 
 type App struct {
-	Router *gin.Engine
+	Router              *gin.Engine
+	transactionsService transactions.Service
 }
 
 func New() *App {
-	app := &App {
-		Router: gin.Default(),
+	transactionsService := transactions.NewService()
+	app := &App{
+		Router:              gin.Default(),
+		transactionsService: transactionsService,
 	}
 	app.setupRoutes()
 	return app
@@ -24,7 +28,13 @@ func (app *App) Start(port string) {
 }
 
 func (app *App) setupRoutes() {
-	pingController := ping.NewController()
+	transactionsController := transactionsController.NewController(app.transactionsService)
 
-	app.Router.GET("/ping", pingController.HandlePing)
+	transactions := app.Router.RouterGroup.Group("/transactions")
+	{
+		transactions.POST("", transactionsController.HandleAdd)
+		transactions.GET("/:id", transactionsController.HandleGetByID)
+		transactions.GET("", transactionsController.HandleGetHistory)
+	}
+	app.Router.GET("/balance", transactionsController.HandleGetBalance)
 }
