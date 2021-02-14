@@ -18,15 +18,16 @@ var (
 type Service interface {
 	Add(transaction *TransactionBody) (*Transaction, error)
 	GetByID(transactionID string) (*Transaction, error)
-	GetAll() []*Transaction
+	GetHistory() []*Transaction
 	GetBalance() float64
 }
 
 type service struct {
-	transactions       map[string]*Transaction
-	total              float64
-	mu                 sync.Mutex
-	transactionChannel chan Transaction
+	transactionsMap     map[string]*Transaction
+	transactionsHistory []*Transaction
+	total               float64
+	mu                  sync.Mutex
+	transactionChannel  chan Transaction
 }
 
 func (s *service) addConcurrent(transaction TransactionBody) {
@@ -37,7 +38,8 @@ func (s *service) addConcurrent(transaction TransactionBody) {
 		Amount:        transaction.Amount,
 		EffectiveDate: time.Now(),
 	}
-	s.transactions[newTransaction.ID] = newTransaction
+	s.transactionsMap[newTransaction.ID] = newTransaction
+	s.transactionsHistory = append(s.transactionsHistory, newTransaction)
 	if transaction.Type == Credit {
 		s.total += transaction.Amount
 	} else {
@@ -46,25 +48,24 @@ func (s *service) addConcurrent(transaction TransactionBody) {
 	s.transactionChannel <- *newTransaction
 }
 
+//GetByID returns transaction with given id
 func (s *service) GetByID(transactionID string) (*Transaction, error) {
 	_, err := uuid.Parse(transactionID)
 	if err != nil {
 		return nil, ErrInvalidID
 	}
-	if transaction, ok := s.transactions[transactionID]; ok {
+	if transaction, ok := s.transactionsMap[transactionID]; ok {
 		return transaction, nil
 	}
 	return nil, ErrNotFound
 }
 
-func (s *service) GetAll() []*Transaction {
-	transactions := make([]*Transaction, 0, len(s.transactions))
-	for _, v := range s.transactions {
-		transactions = append(transactions, v)
-	}
-	return transactions
+//GetHistory returns transactions in chronological order
+func (s *service) GetHistory() []*Transaction {
+	return s.transactionsHistory
 }
 
+//Add adds a transaction to history and updates balance
 func (s *service) Add(transaction *TransactionBody) (*Transaction, error) {
 	if transaction.Type != Debit && transaction.Type != Credit {
 		return nil, ErrInvalidTransactionType
@@ -84,8 +85,9 @@ func (s *service) GetBalance() float64 {
 
 func NewService() Service {
 	return &service{
-		total:              0,
-		transactions:       make(map[string]*Transaction),
-		transactionChannel: make(chan Transaction, 20),
+		total:               0,
+		transactionsMap:     make(map[string]*Transaction),
+		transactionsHistory: make([]*Transaction, 0),
+		transactionChannel:  make(chan Transaction, 20),
 	}
 }

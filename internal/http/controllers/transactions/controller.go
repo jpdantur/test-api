@@ -16,6 +16,7 @@ func NewController(transactionsService transactions.Service) *Controller {
 	return &Controller{transactionsService: transactionsService}
 }
 
+//HandleAdd adds a transaction to history
 func (ctrl *Controller) HandleAdd(c *gin.Context) {
 	var body transactions.TransactionBody
 	if err := c.BindJSON(&body); err != nil {
@@ -30,6 +31,7 @@ func (ctrl *Controller) HandleAdd(c *gin.Context) {
 	}
 }
 
+//HandleGetByID returns the transaction with given ID
 func (ctrl *Controller) HandleGetByID(c *gin.Context) {
 	id := c.Param("id")
 	switch res, err := ctrl.transactionsService.GetByID(id); {
@@ -42,10 +44,12 @@ func (ctrl *Controller) HandleGetByID(c *gin.Context) {
 	}
 }
 
+//HandleGetHistory returns transactions history
 func (ctrl *Controller) HandleGetHistory(c *gin.Context) {
-	c.JSON(http.StatusOK, ctrl.transactionsService.GetAll())
+	c.JSON(http.StatusOK, ctrl.transactionsService.GetHistory())
 }
 
+//HandleGetBalance returns transactions balance
 func (ctrl *Controller) HandleGetBalance(c *gin.Context) {
 	c.JSON(http.StatusOK, ctrl.transactionsService.GetBalance())
 }

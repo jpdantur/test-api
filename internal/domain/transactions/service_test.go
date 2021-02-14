@@ -92,7 +92,7 @@ func TestService_GetAll(t *testing.T) {
 		Amount: 0.5,
 	})
 	assert.Nil(err2)
-	res := service.GetAll()
+	res := service.GetHistory()
 	assert.Contains(res, res1)
 	assert.Contains(res, res2)
 	assert.Len(res, 2)
